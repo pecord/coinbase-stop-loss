@@ -1,0 +1,11 @@
+{
+  "name": "stop-loss-bot-coinbase",
+  "version": "1.0.0",
+  "description": "sells if the price falls below a threshold",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
