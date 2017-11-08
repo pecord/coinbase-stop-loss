@@ -1,7 +1,7 @@
 let Client = require("coinbase").Client
-let async = require("async")
-let debug = require("debug")("coinbase:stop-loss")
-let _ = require("lodash")
+let async  = require("async")
+let debug  = require("debug")("coinbase:stop-loss")
+let _      = require("lodash")
 
 if (!process.env.COINBASE_API_KEY) {
   throw new Error("Coinbase API key missing")
@@ -29,7 +29,10 @@ async.doWhilst((done) => {
       debug("get sell price returned with an error", err);
       return done(err)
     } else {
-      if (!sellPrice) return done(new Error("no sale price"))
+      if (!sellPrice) {
+        return done(new Error("no sale price"))
+      }
+
       debug("got sell price", sellPrice);
       let isItTimeToSell = sellPrice < stopLossPrice
       debug(`is it time to sell... ${isItTimeToSell ? "YES!" : "no"} ${sellPrice} < ${stopLossPrice}`)
@@ -62,9 +65,12 @@ function getSellPrice(cb) {
       return cb(err)
     } else {
       let sellPrice = _.get(obj, "data.amount")
-      sellPrice = safelyParseNumber(sellPrice)
-      if (!sellPrice) return cb(new Error(`no sell price ${sellPrice}`))
-      return cb(null, sellPrice)
+      sellPrice     = safelyParseNumber(sellPrice)
+      if (!sellPrice) {
+        return cb(new Error(`no sell price ${sellPrice}`))
+      } else {
+        return cb(null, sellPrice)
+      }
     }
   });
 }
