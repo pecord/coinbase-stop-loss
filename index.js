@@ -1,4 +1,7 @@
-var Client = require('coinbase').Client;
+let Client = require("coinbase").Client
+let async = require("async")
+let debug = require("debug")("coinbase:stop-loss")
+let _ = require("lodash")
 
 if (!process.env.COINBASE_API_KEY) {
   throw new Error("Coinbase API key missing")
@@ -8,48 +11,60 @@ if (!process.env.COINBASE_API_SECRET) {
   throw new Error("Coinbase API key missing")
 }
 
-if (!process.env.COINBASE_STOP_LOSS) {
-  throw new Error("Coinbase stop loss price missing")
+let stopLossPrice = safelyParseNumber(process.env.COINBASE_STOP_LOSS)
+if(stopLossPrice <= 0) {
+  throw new Error("Stop loss price must be greater than zero")
 }
-
-try {
-  parseFloat(process.env.COINBASE_STOP_LOSS, 10)
-} catch (error) {
-  throw new Error("Coinbase stop loss price not valid")
-}
+debug("parsed stop loss as ", stopLossPrice)
 
 var client = new Client({
   'apiKey'   : process.env.COINBASE_API_KEY,
   'apiSecret': process.env.COINBASE_API_SECRET
 });
 
-// Listing available accounts
-client.getAccounts({}, function(err, accounts) {
-  if (err) throw err
-  accounts.forEach(function(acct) {
-    console.log('my bal: ' + acct.balance.amount + ' for ' + acct.name);
+async.doWhilst((done) => {
+  debug("*********************************************************************")
+  getSellPrice((err, sellPrice) => {
+    if (err) {
+      debug("get sell price returned with an error", err);
+      return done(err)
+    } else {
+      if (!sellPrice) return done(new Error("no sale price"))
+      debug("got sell price", sellPrice);
+      let isItTimeToSell = sellPrice < stopLossPrice
+      debug(`is it time to sell... ${isItTimeToSell ? "YES!" : "no"} ${sellPrice} < ${stopLossPrice}`)
+
+      if (isItTimeToSell) {
+        debug("selling EVERYTHING!!!... you are welcome :)")
+        process.exit(0);
+      } else {
+        debug("it is not time to sell")
+        return done(null)
+      }
+    }
+  })
+}, () => { return true })
+
+function safelyParseNumber(numberToBeParsed) {
+  if (!numberToBeParsed) {
+    throw new Error("Number to be parsed is missing")
+  } else {
+    let parsedNumber = parseFloat(numberToBeParsed, 10)
+    return parsedNumber
+  }
+}
+
+function getSellPrice(cb) {
+  debug("starting get sell price")
+  client.getSellPrice({'currencyPair': 'BTC-USD'}, function(err, obj) {
+    if (err) {
+      debug("get sell price return with an error");
+      return cb(err)
+    } else {
+      let sellPrice = _.get(obj, "data.amount")
+      sellPrice = safelyParseNumber(sellPrice)
+      if (!sellPrice) return cb(new Error(`no sell price ${sellPrice}`))
+      return cb(null, sellPrice)
+    }
   });
-});
-
-// Current buy price
-client.getBuyPrice({'currencyPair': 'BTC-USD'}, function(err, obj) {
-  console.log('total amount: ' + obj.data.amount);
-});
-
-// Sell command
-// var args = {
-//   "amount": "12",
-//   "currency": "BTC"
-// };
-// account.sell(args, function(err, xfer) {
-//   console.log('my xfer id is: ' + xfer.id);
-// });
-
-while(true) {
-  // Get balance
-  // Get sell price
-  // Compare sell price to stop loss
-  // if stop loss triggered
-  //  - sell balance
-  // else loop again
 }
