@@ -15,6 +15,10 @@ if (!process.env.COINBASE_STOP_LOSS) {
   throw new Error("Coinbase stop loss price is missing")
 }
 
+if (!process.env.COINBASE_ACCOUNT_ID) {
+  throw new Error("Coinbase account id is missing")
+}
+
 let stopLossPrice = safelyParseNumber(process.env.COINBASE_STOP_LOSS)
 if(stopLossPrice <= 0) {
   throw new Error("Stop loss price must be greater than zero")
@@ -88,8 +92,10 @@ function getBitcoinTotal(cb) {
   client.getAccounts({}, function(err, accounts) {
     if(err) return cb(err)
     accounts.forEach(function(acct) {
-      if(acct.balance.currency === "BTC")
-      return cb(null, acct.balance.amount)
+      if(acct.balance.currency === "BTC") {
+        debug("acct", acct)
+        return cb(null, acct.balance.amount)
+      }
     })
   })
 }
@@ -99,9 +105,13 @@ function sellBitcoin(amount, cb) {
     "amount": amount,
     "currency": "BTC"
   };
-  account.sell(args, function(err, xfer) {
-    if(err) return cb(err)
-    console.log('my xfer id is: ' + xfer.id);
-    return cb(null, xfer)
+  client.getAccount(process.env.COINBASE_ACCOUNT_ID, function(err, account) {
+    debug('bal: ' + account.balance.amount + ' currency: ' + account.balance.currency);
+    account.sell(args, function(err, xfer) {
+      if(err) return cb(err)
+      debug('my xfer id is: ' + xfer.id);
+      return cb(null, xfer)
+    });
   });
+
 }
