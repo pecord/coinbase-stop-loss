@@ -44,10 +44,14 @@ async.waterfall([
         if (err) return done(err)
         if (!btcTotal) return done(new Error("no btc total"))
         debug("got btc total", btcTotal)
+        if (btcTotal === 0) {
+          debug("noting to sell, exiting")
+          process.exit()
+        }
         debug("selling EVERYTHING!!!... you are welcome :)")
         sellBitcoin(btcTotal, (err, xfer) => {
           debug("sell complete", xfer)
-          process.exit(0);
+          process.exit()
         })
       })
     } else {
