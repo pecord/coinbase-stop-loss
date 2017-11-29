@@ -54,7 +54,8 @@ async.waterfall([
       debug("it is not time to sell")
       done(null)
     }
-  }], (err, results) => {
+  }
+], (err, results) => {
   if(err) console.log(err.stack)
   exitHandler.bind(null, {exit:true})
 })
@@ -115,7 +116,7 @@ function sellBitcoin(amount, cb) {
 }
 
 function exitHandler(options, err) {
-  if (options.cleanup) console.log('clean')
+  if (options.cleanup) debug('exiting')
   if (err) console.log(err.stack);
   if (options.exit) process.exit();
 }
