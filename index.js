@@ -33,30 +33,32 @@ var client = new Client({
 async.doWhilst((done) => {
   debug("*********************************************************************")
   async.series({
-    btcTotal: (cb) => getBitcoinTotal(cb),
     sellPrice: (cb) => getSellPrice(cb)
   }, (err, results) => {
     if (err) return done(err)
-    let {btcTotal, sellPrice} = results
+    let {sellPrice} = results
 
     if (!sellPrice) return done(new Error("no sale price"))
     debug("got sell price", sellPrice);
-
-    if (!btcTotal) return done(new Error("no btc total"))
-    debug("got btc total", btcTotal)
 
     let isItTimeToSell = sellPrice < stopLossPrice
 
     debug(`is it time to sell... ${isItTimeToSell ? "YES!" : "no"} ${sellPrice} < ${stopLossPrice}`)
     if (isItTimeToSell) {
-      debug("selling EVERYTHING!!!... you are welcome :)")
-      sellBitcoin(btcTotal, (err, xfer) => {
-        debug("sell complete", xfer)
-        process.exit(0);
+      getBitcoinTotal((err, btcTotal) => {
+        if (err) return done(err)
+        if (!btcTotal) return done(new Error("no btc total"))
+        debug("got btc total", btcTotal)
+        debug("selling EVERYTHING!!!... you are welcome :)")
+        sellBitcoin(btcTotal, (err, xfer) => {
+          debug("sell complete", xfer)
+          process.exit(0);
+        })
       })
     } else {
       debug("it is not time to sell")
-      return done(null)
+      // wait a sec before returning
+      setTimeout(() => done(null), 1000)
     }
   })
 }, () => { return true })
@@ -93,7 +95,7 @@ function getBitcoinTotal(cb) {
     if(err) return cb(err)
     accounts.forEach(function(acct) {
       if(acct.balance.currency === "BTC") {
-        debug("acct", acct)
+        //debug("acct", acct)
         return cb(null, acct.balance.amount)
       }
     })
