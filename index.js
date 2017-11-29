@@ -30,14 +30,9 @@ var client = new Client({
   'apiSecret': process.env.COINBASE_API_SECRET
 });
 
-async.doWhilst((done) => {
-  debug("*********************************************************************")
-  async.series({
-    sellPrice: (cb) => getSellPrice(cb)
-  }, (err, results) => {
-    if (err) return done(err)
-    let {sellPrice} = results
-
+async.waterfall([
+  getSellPrice,
+  (sellPrice, done) => {
     if (!sellPrice) return done(new Error("no sale price"))
     debug("got sell price", sellPrice);
 
@@ -57,11 +52,12 @@ async.doWhilst((done) => {
       })
     } else {
       debug("it is not time to sell")
-      // wait a sec before returning
-      setTimeout(() => done(null), 1000)
+      done(null)
     }
-  })
-}, () => { return true })
+  }], (err, results) => {
+  if(err) console.log(err.stack)
+  exitHandler.bind(null, {exit:true})
+})
 
 function safelyParseNumber(numberToBeParsed) {
   try {
